@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { StatsCard } from "@/components/StatsCard";
 import { SessionCard } from "@/components/SessionCard";
 import { InterviewTypeCard } from "@/components/InterviewTypeCard";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Brain,
   TrendingUp,
@@ -17,18 +19,18 @@ import {
   Mic,
   BarChart3,
   Sparkles,
+  LogOut,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
   const [activeView, setActiveView] = useState<"dashboard" | "start">("dashboard");
 
   const handleStartInterview = (type: string) => {
-    toast({
-      title: "Starting Interview",
-      description: `Preparing ${type} interview session...`,
-    });
+    navigate(`/interview?type=${encodeURIComponent(type)}`);
   };
 
   const mockSessions = [
@@ -85,6 +87,14 @@ const Index = () => {
                 <Sparkles className="mr-2 h-4 w-4" />
                 Start Interview
               </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={signOut}
+                title="Sign Out"
+              >
+                <LogOut className="h-5 w-5" />
+              </Button>
             </nav>
           </div>
         </div>
@@ -99,7 +109,7 @@ const Index = () => {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <h2 className="text-3xl font-bold text-foreground mb-3">
-                      Welcome back! 👋
+                      Welcome back, {user?.user_metadata?.full_name || 'there'}! 👋
                     </h2>
                     <p className="text-muted-foreground text-lg mb-6">
                       Ready to ace your next interview? Let's continue your preparation journey.
