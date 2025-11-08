@@ -14,7 +14,116 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      interview_responses: {
+        Row: {
+          ai_feedback: string | null
+          answer_text: string | null
+          audio_url: string | null
+          created_at: string | null
+          id: string
+          question_text: string
+          score: number | null
+          session_id: string
+          video_url: string | null
+        }
+        Insert: {
+          ai_feedback?: string | null
+          answer_text?: string | null
+          audio_url?: string | null
+          created_at?: string | null
+          id?: string
+          question_text: string
+          score?: number | null
+          session_id: string
+          video_url?: string | null
+        }
+        Update: {
+          ai_feedback?: string | null
+          answer_text?: string | null
+          audio_url?: string | null
+          created_at?: string | null
+          id?: string
+          question_text?: string
+          score?: number | null
+          session_id?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interview_responses_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "interview_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      interview_sessions: {
+        Row: {
+          behavioral_score: number | null
+          communication_score: number | null
+          completed_at: string | null
+          created_at: string | null
+          duration_minutes: number | null
+          id: string
+          interview_type: string
+          overall_score: number | null
+          started_at: string | null
+          status: string
+          technical_score: number | null
+          user_id: string
+        }
+        Insert: {
+          behavioral_score?: number | null
+          communication_score?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          duration_minutes?: number | null
+          id?: string
+          interview_type: string
+          overall_score?: number | null
+          started_at?: string | null
+          status?: string
+          technical_score?: number | null
+          user_id: string
+        }
+        Update: {
+          behavioral_score?: number | null
+          communication_score?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          duration_minutes?: number | null
+          id?: string
+          interview_type?: string
+          overall_score?: number | null
+          started_at?: string | null
+          status?: string
+          technical_score?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          full_name: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          full_name?: string | null
+          id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
