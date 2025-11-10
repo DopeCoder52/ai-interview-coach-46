@@ -20,6 +20,7 @@ import {
   BarChart3,
   Sparkles,
   LogOut,
+  Settings,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -133,6 +134,14 @@ const Index = () => {
               >
                 <Sparkles className="mr-2 h-4 w-4" />
                 Start Interview
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate("/settings")}
+                title="Settings"
+              >
+                <Settings className="h-5 w-5" />
               </Button>
               <Button
                 variant="ghost"
