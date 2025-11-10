@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -22,40 +22,87 @@ import {
   LogOut,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+
+interface Session {
+  id: string;
+  interview_type: string;
+  status: string;
+  started_at: string;
+  completed_at: string;
+}
 
 const Index = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const [activeView, setActiveView] = useState<"dashboard" | "start">("dashboard");
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalInterviews: 0,
+    averageScore: 0,
+    timePracticed: 0,
+    skillsMastered: 0,
+  });
+
+  useEffect(() => {
+    if (user) {
+      loadUserData();
+    }
+  }, [user]);
+
+  const loadUserData = async () => {
+    try {
+      // Fetch sessions
+      const { data: sessionsData, error: sessionsError } = await supabase
+        .from("interview_sessions")
+        .select("*")
+        .eq("user_id", user?.id)
+        .order("started_at", { ascending: false })
+        .limit(6);
+
+      if (sessionsError) throw sessionsError;
+      setSessions(sessionsData || []);
+
+      // Fetch responses to calculate stats
+      const { data: responsesData, error: responsesError } = await supabase
+        .from("interview_responses")
+        .select("score, session_id")
+        .in("session_id", sessionsData?.map(s => s.id) || []);
+
+      if (responsesError) throw responsesError;
+
+      // Calculate stats
+      const completedSessions = sessionsData?.filter(s => s.status === "completed") || [];
+      const totalScore = responsesData?.reduce((sum, r) => sum + (r.score || 0), 0) || 0;
+      const avgScore = responsesData && responsesData.length > 0 
+        ? Math.round(totalScore / responsesData.length) 
+        : 0;
+
+      const totalMinutes = completedSessions.reduce((sum, s) => {
+        const duration = s.completed_at && s.started_at 
+          ? Math.round((new Date(s.completed_at).getTime() - new Date(s.started_at).getTime()) / 60000)
+          : 0;
+        return sum + duration;
+      }, 0);
+
+      setStats({
+        totalInterviews: sessionsData?.length || 0,
+        averageScore: avgScore,
+        timePracticed: Math.round(totalMinutes / 60 * 10) / 10,
+        skillsMastered: Math.min(Math.floor(avgScore / 10), 12),
+      });
+    } catch (error: any) {
+      console.error("Error loading user data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleStartInterview = (type: string) => {
     navigate(`/interview?type=${encodeURIComponent(type)}`);
   };
-
-  const mockSessions = [
-    {
-      date: "Jan 15, 2025",
-      duration: "45 min",
-      type: "Technical Interview - DSA",
-      score: 85,
-      status: "completed" as const,
-    },
-    {
-      date: "Jan 12, 2025",
-      duration: "30 min",
-      type: "HR Interview",
-      score: 78,
-      status: "completed" as const,
-    },
-    {
-      date: "Jan 10, 2025",
-      duration: "20 min",
-      type: "System Design",
-      score: 0,
-      status: "in-progress" as const,
-    },
-  ];
 
   return (
     <div className="min-h-screen gradient-hero">
@@ -144,27 +191,27 @@ const Index = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatsCard
                   title="Total Interviews"
-                  value={24}
+                  value={stats.totalInterviews}
                   icon={Video}
-                  trend="+3 this week"
+                  description="All time"
                 />
                 <StatsCard
                   title="Average Score"
-                  value="82%"
+                  value={`${stats.averageScore}%`}
                   icon={TrendingUp}
-                  trend="+5% improvement"
+                  description="Across all interviews"
                 />
                 <StatsCard
                   title="Time Practiced"
-                  value="18h"
+                  value={`${stats.timePracticed}h`}
                   icon={Clock}
-                  description="This month"
+                  description="Total practice time"
                 />
                 <StatsCard
                   title="Skills Mastered"
-                  value={12}
+                  value={stats.skillsMastered}
                   icon={Award}
-                  trend="3 new this week"
+                  description="Core competencies"
                 />
               </div>
             </section>
@@ -173,16 +220,44 @@ const Index = () => {
             <section className="mb-12">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-2xl font-bold text-foreground">Recent Sessions</h3>
-                <Button variant="ghost">
-                  View All
-                  <ChevronRight className="ml-2 h-4 w-4" />
-                </Button>
               </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {mockSessions.map((session, idx) => (
-                  <SessionCard key={idx} {...session} />
-                ))}
-              </div>
+              {loading ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Loading your sessions...
+                </div>
+              ) : sessions.length > 0 ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {sessions.map((session) => {
+                    const duration = session.completed_at && session.started_at
+                      ? Math.round((new Date(session.completed_at).getTime() - new Date(session.started_at).getTime()) / 60000)
+                      : 0;
+                    
+                    return (
+                      <SessionCard
+                        key={session.id}
+                        sessionId={session.id}
+                        date={new Date(session.started_at).toLocaleDateString()}
+                        duration={`${duration} min`}
+                        type={session.interview_type}
+                        status={session.status as "completed" | "in-progress"}
+                      />
+                    );
+                  })}
+                </div>
+              ) : (
+                <Card className="gradient-card shadow-soft p-8 text-center">
+                  <Video className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground mb-4">
+                    No interviews yet. Start your first practice session!
+                  </p>
+                  <Button
+                    onClick={() => setActiveView("start")}
+                    className="gradient-primary text-white"
+                  >
+                    Start Interview
+                  </Button>
+                </Card>
+              )}
             </section>
 
             {/* Features Showcase */}

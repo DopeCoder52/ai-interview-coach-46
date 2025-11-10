@@ -1,17 +1,43 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock, TrendingUp } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SessionCardProps {
+  sessionId: string;
   date: string;
   duration: string;
   type: string;
-  score: number;
   status: "completed" | "in-progress";
 }
 
-export const SessionCard = ({ date, duration, type, score, status }: SessionCardProps) => {
+export const SessionCard = ({ sessionId, date, duration, type, status }: SessionCardProps) => {
+  const navigate = useNavigate();
+  const [score, setScore] = useState<number>(0);
+
+  useEffect(() => {
+    if (status === "completed") {
+      loadScore();
+    }
+  }, [sessionId, status]);
+
+  const loadScore = async () => {
+    const { data } = await supabase
+      .from("interview_responses")
+      .select("score")
+      .eq("session_id", sessionId);
+
+    if (data && data.length > 0) {
+      const avgScore = Math.round(
+        data.reduce((sum, r) => sum + (r.score || 0), 0) / data.length
+      );
+      setScore(avgScore);
+    }
+  };
+
   const getScoreColor = (score: number) => {
     if (score >= 80) return "text-success";
     if (score >= 60) return "text-accent";
@@ -46,12 +72,23 @@ export const SessionCard = ({ date, duration, type, score, status }: SessionCard
             <span className="text-sm text-muted-foreground">Overall Score:</span>
             <span className={`text-2xl font-bold ${getScoreColor(score)}`}>{score}%</span>
           </div>
-          <Button variant="outline" size="sm">View Details</Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => navigate(`/results?session=${sessionId}`)}
+          >
+            View Details
+          </Button>
         </div>
       )}
       
       {status === "in-progress" && (
-        <Button className="w-full gradient-primary text-white">Continue Session</Button>
+        <Button 
+          className="w-full gradient-primary text-white"
+          onClick={() => navigate(`/interview?session=${sessionId}`)}
+        >
+          Continue Session
+        </Button>
       )}
     </Card>
   );

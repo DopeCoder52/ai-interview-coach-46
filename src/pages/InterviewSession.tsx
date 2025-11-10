@@ -214,7 +214,7 @@ const InterviewSession = () => {
       });
 
       setTimeout(() => {
-        navigate(`/?session=${sessionId}`);
+        navigate(`/results?session=${sessionId}`);
       }, 2000);
     } catch (error: any) {
       console.error('Error completing session:', error);
