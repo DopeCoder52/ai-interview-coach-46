@@ -7,7 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Video, Mic, MicOff, Send, Loader2, CheckCircle } from "lucide-react";
+import { Video, Mic, MicOff, Send, Loader2, CheckCircle, Volume2 } from "lucide-react";
+import { VoiceManager } from "@/utils/voiceManager";
 
 const InterviewSession = () => {
   const [searchParams] = useSearchParams();
@@ -29,6 +30,9 @@ const InterviewSession = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [voiceManager] = useState(() => new VoiceManager());
+  const [isVoiceRecording, setIsVoiceRecording] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   useEffect(() => {
     initializeSession();
@@ -37,6 +41,7 @@ const InterviewSession = () => {
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
+      voiceManager.cleanup();
     };
   }, []);
 
@@ -113,6 +118,11 @@ const InterviewSession = () => {
 
       setCurrentQuestion(data.question);
       setAnswer("");
+      
+      // Speak the question
+      setIsSpeaking(true);
+      await voiceManager.speakText(data.question);
+      setIsSpeaking(false);
     } catch (error: any) {
       console.error('Error loading question:', error);
       toast({
@@ -120,8 +130,64 @@ const InterviewSession = () => {
         description: "Failed to load question. Please try again.",
         variant: "destructive",
       });
+      setIsSpeaking(false);
     } finally {
       setIsLoadingQuestion(false);
+    }
+  };
+
+  const startVoiceAnswer = async () => {
+    if (!stream) {
+      toast({
+        title: "Microphone Required",
+        description: "Please enable microphone access",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await voiceManager.startRecording(stream);
+      setIsVoiceRecording(true);
+      toast({
+        title: "Recording Started",
+        description: "Speak your answer clearly",
+      });
+    } catch (error) {
+      console.error('Error starting voice recording:', error);
+      toast({
+        title: "Recording Error",
+        description: "Failed to start voice recording",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const stopVoiceAnswer = async () => {
+    try {
+      const audioBase64 = await voiceManager.stopRecording();
+      setIsVoiceRecording(false);
+      
+      toast({
+        title: "Processing...",
+        description: "Transcribing your answer",
+      });
+
+      const transcribedText = await voiceManager.transcribeAudio(audioBase64);
+      setAnswer(transcribedText);
+      
+      toast({
+        title: "Answer Recorded",
+        description: "You can now review and submit",
+      });
+    } catch (error) {
+      console.error('Error processing voice answer:', error);
+      toast({
+        title: "Error",
+        description: "Failed to process voice answer",
+        variant: "destructive",
+      });
+      setIsVoiceRecording(false);
     }
   };
 
@@ -276,7 +342,15 @@ const InterviewSession = () => {
           <Card className="gradient-card shadow-medium p-6">
             <div className="space-y-6">
               <div>
-                <h2 className="text-lg font-semibold text-foreground mb-3">Current Question</h2>
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-lg font-semibold text-foreground">Current Question</h2>
+                  {isSpeaking && (
+                    <div className="flex items-center gap-2 text-primary">
+                      <Volume2 className="h-4 w-4 animate-pulse" />
+                      <span className="text-sm">AI Speaking...</span>
+                    </div>
+                  )}
+                </div>
                 {isLoadingQuestion ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -293,35 +367,56 @@ const InterviewSession = () => {
                 <Textarea
                   value={answer}
                   onChange={(e) => setAnswer(e.target.value)}
-                  placeholder="Type your answer here..."
+                  placeholder="Type your answer or use voice input..."
                   className="min-h-[200px] resize-none"
-                  disabled={isLoadingQuestion || isSubmitting}
+                  disabled={isLoadingQuestion || isSubmitting || isVoiceRecording}
                 />
               </div>
 
               <div className="flex gap-3">
-                <Button
-                  onClick={submitAnswer}
-                  disabled={isLoadingQuestion || isSubmitting || !answer.trim()}
-                  className="flex-1 gradient-primary text-white"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Analyzing...
-                    </>
-                  ) : completedQuestions === totalQuestions - 1 ? (
-                    <>
-                      <CheckCircle className="mr-2 h-4 w-4" />
-                      Submit Final Answer
-                    </>
-                  ) : (
-                    <>
-                      <Send className="mr-2 h-4 w-4" />
-                      Submit & Continue
-                    </>
-                  )}
-                </Button>
+                {!isVoiceRecording ? (
+                  <>
+                    <Button
+                      onClick={startVoiceAnswer}
+                      disabled={isLoadingQuestion || isSubmitting || isSpeaking}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      <Mic className="mr-2 h-4 w-4" />
+                      Voice Answer
+                    </Button>
+                    <Button
+                      onClick={submitAnswer}
+                      disabled={isLoadingQuestion || isSubmitting || !answer.trim()}
+                      className="flex-1 gradient-primary text-white"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Analyzing...
+                        </>
+                      ) : completedQuestions === totalQuestions - 1 ? (
+                        <>
+                          <CheckCircle className="mr-2 h-4 w-4" />
+                          Submit Final Answer
+                        </>
+                      ) : (
+                        <>
+                          <Send className="mr-2 h-4 w-4" />
+                          Submit & Continue
+                        </>
+                      )}
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    onClick={stopVoiceAnswer}
+                    className="flex-1 gradient-primary text-white"
+                  >
+                    <MicOff className="mr-2 h-4 w-4" />
+                    Stop Recording
+                  </Button>
+                )}
               </div>
             </div>
           </Card>

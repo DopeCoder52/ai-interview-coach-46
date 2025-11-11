@@ -1,1 +1,13 @@
 project_id = "xvbdurdegfkzjtwdtfoq"
+
+[functions.text-to-speech]
+verify_jwt = false
+
+[functions.speech-to-text]
+verify_jwt = false
+
+[functions.generate-interview-question]
+verify_jwt = false
+
+[functions.analyze-interview-answer]
+verify_jwt = false
