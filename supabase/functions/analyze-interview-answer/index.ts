@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { question, answer, interviewType } = await req.json();
+    const { question, answer, subjects } = await req.json();
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
@@ -28,13 +28,13 @@ Analyze the candidate's answer and provide:
 
 Be constructive, encouraging, and specific. Format your response as JSON with keys: score, strengths (array), improvements (array), feedback (string).`;
 
-    const userPrompt = `Interview Type: ${interviewType}
+    const userPrompt = `Interview Subjects: ${subjects}
 Question: ${question}
 Candidate's Answer: ${answer}
 
 Evaluate this answer comprehensively.`;
 
-    console.log('Analyzing answer for:', interviewType);
+    console.log('Analyzing answer for:', subjects);
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',

@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { StatsCard } from "@/components/StatsCard";
 import { SessionCard } from "@/components/SessionCard";
 import { InterviewTypeCard } from "@/components/InterviewTypeCard";
@@ -21,6 +23,9 @@ import {
   Sparkles,
   LogOut,
   Settings,
+  Database,
+  Network,
+  Layers,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,6 +38,14 @@ interface Session {
   completed_at: string;
 }
 
+const SUBJECTS = [
+  { id: "DSA", name: "Data Structures & Algorithms", icon: Code },
+  { id: "OS", name: "Operating Systems", icon: Layers },
+  { id: "DBMS", name: "Database Management Systems", icon: Database },
+  { id: "Networks", name: "Computer Networks", icon: Network },
+  { id: "OOPS", name: "Object-Oriented Programming", icon: Briefcase },
+];
+
 const Index = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -40,6 +53,7 @@ const Index = () => {
   const [activeView, setActiveView] = useState<"dashboard" | "start">("dashboard");
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [stats, setStats] = useState({
     totalInterviews: 0,
     averageScore: 0,
@@ -101,8 +115,24 @@ const Index = () => {
     }
   };
 
-  const handleStartInterview = (type: string) => {
-    navigate(`/interview?type=${encodeURIComponent(type)}`);
+  const handleSubjectToggle = (subjectId: string) => {
+    setSelectedSubjects(prev =>
+      prev.includes(subjectId)
+        ? prev.filter(id => id !== subjectId)
+        : [...prev, subjectId]
+    );
+  };
+
+  const handleStartInterview = () => {
+    if (selectedSubjects.length === 0) {
+      toast({
+        title: "Select at least one subject",
+        description: "Please choose one or more subjects for your interview",
+        variant: "destructive",
+      });
+      return;
+    }
+    navigate(`/interview?subjects=${encodeURIComponent(selectedSubjects.join(','))}`);
   };
 
   return (
@@ -309,39 +339,64 @@ const Index = () => {
             <section className="mb-8">
               <Card className="gradient-card shadow-strong p-8 mb-8">
                 <h2 className="text-3xl font-bold text-foreground mb-3">
-                  Choose Your Interview Type
+                  Choose Your Interview Subjects
                 </h2>
-                <p className="text-muted-foreground text-lg">
-                  Select the type of interview you want to practice. Our AI will adapt questions based on your performance.
+                <p className="text-muted-foreground text-lg mb-6">
+                  Select one or multiple subjects for your interview. You'll receive 15 questions total, distributed across your chosen topics.
                 </p>
-              </Card>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                  {SUBJECTS.map((subject) => {
+                    const Icon = subject.icon;
+                    const isSelected = selectedSubjects.includes(subject.id);
+                    
+                    return (
+                      <div
+                        key={subject.id}
+                        onClick={() => handleSubjectToggle(subject.id)}
+                        className={`cursor-pointer rounded-lg border-2 p-4 transition-all ${
+                          isSelected
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/50"
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => handleSubjectToggle(subject.id)}
+                            className="mt-1"
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Icon className="h-5 w-5 text-primary" />
+                              <Label className="font-semibold text-foreground cursor-pointer">
+                                {subject.name}
+                              </Label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <InterviewTypeCard
-                  title="Technical - DSA"
-                  description="Practice data structures, algorithms, and coding problems"
-                  icon={Code}
-                  duration="30-45 min"
-                  questions={8}
-                  onStart={() => handleStartInterview("Technical DSA")}
-                />
-                <InterviewTypeCard
-                  title="System Design"
-                  description="Design scalable systems and architecture solutions"
-                  icon={Briefcase}
-                  duration="45-60 min"
-                  questions={3}
-                  onStart={() => handleStartInterview("System Design")}
-                />
-                <InterviewTypeCard
-                  title="HR & Behavioral"
-                  description="Master common HR questions and behavioral scenarios"
-                  icon={Users}
-                  duration="20-30 min"
-                  questions={10}
-                  onStart={() => handleStartInterview("HR & Behavioral")}
-                />
-              </div>
+                <div className="flex items-center justify-between pt-4 border-t border-border">
+                  <div className="text-sm text-muted-foreground">
+                    {selectedSubjects.length === 0 && "No subjects selected"}
+                    {selectedSubjects.length === 1 && "1 subject selected - 15 questions from this topic"}
+                    {selectedSubjects.length > 1 && `${selectedSubjects.length} subjects selected - Questions distributed evenly (15 total)`}
+                  </div>
+                  <Button
+                    onClick={handleStartInterview}
+                    disabled={selectedSubjects.length === 0}
+                    size="lg"
+                    className="gradient-primary text-white"
+                  >
+                    <Sparkles className="mr-2 h-5 w-5" />
+                    Start Interview
+                  </Button>
+                </div>
+              </Card>
             </section>
 
             <Card className="gradient-card shadow-soft p-6">

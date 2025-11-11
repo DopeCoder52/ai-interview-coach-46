@@ -12,42 +12,55 @@ serve(async (req) => {
   }
 
   try {
-    const { interviewType, questionNumber, previousQuestions } = await req.json();
+    const { subjects, questionNumber, totalQuestions = 15, previousQuestions } = await req.json();
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    // Build context-aware system prompt based on interview type
-    let systemPrompt = '';
+    // Calculate which subject to ask about (distribute evenly)
+    const questionsPerSubject = Math.floor(totalQuestions / subjects.length);
+    const remainder = totalQuestions % subjects.length;
     
-    if (interviewType === 'Technical - DSA') {
-      systemPrompt = `You are an expert technical interviewer for CSE students. 
-Generate clear, well-structured Data Structures and Algorithms questions.
-Focus on: Arrays, Linked Lists, Trees, Graphs, Dynamic Programming, Sorting, Searching.
-Provide a single question that tests problem-solving and coding skills.
-Format: State the problem clearly with constraints and expected output.`;
-    } else if (interviewType === 'System Design') {
-      systemPrompt = `You are an expert system design interviewer for CSE students.
-Generate realistic system design questions about scalable applications.
-Focus on: Architecture, Databases, Caching, Load Balancing, Microservices.
-Provide a single high-level design challenge.
-Format: Describe the system to design and key requirements.`;
-    } else if (interviewType === 'HR & Behavioral') {
-      systemPrompt = `You are an experienced HR interviewer for CSE students.
-Generate professional behavioral and situational questions.
-Focus on: Teamwork, Leadership, Problem-solving, Conflict resolution, Career goals.
-Provide a single thoughtful question that reveals candidate's soft skills.
-Format: Ask an open-ended question about their experiences or approach.`;
+    // Determine current subject based on question number
+    let currentSubject = subjects[0];
+    let questionsAsked = 0;
+    
+    for (let i = 0; i < subjects.length; i++) {
+      const questionsForThisSubject = questionsPerSubject + (i < remainder ? 1 : 0);
+      if (questionNumber <= questionsAsked + questionsForThisSubject) {
+        currentSubject = subjects[i];
+        break;
+      }
+      questionsAsked += questionsForThisSubject;
     }
 
-    const userPrompt = previousQuestions && previousQuestions.length > 0
-      ? `Generate question ${questionNumber}. Previous questions asked: ${previousQuestions.join(', ')}. 
-         Make sure this question is different and progressively challenging.`
-      : `Generate the first interview question for a ${interviewType} interview.`;
+    // Build subject-specific system prompts
+    const subjectPrompts: { [key: string]: string } = {
+      'DSA': `You are an expert interviewer for Data Structures and Algorithms. Generate challenging questions that assess problem-solving, algorithmic thinking, and coding ability. Focus on arrays, trees, graphs, dynamic programming, and optimization.`,
+      'OS': `You are an expert interviewer for Operating Systems. Generate questions about processes, threads, memory management, file systems, deadlocks, scheduling algorithms, and system calls.`,
+      'DBMS': `You are an expert interviewer for Database Management Systems. Generate questions about normalization, transactions, ACID properties, indexing, SQL queries, joins, and database design.`,
+      'Networks': `You are an expert interviewer for Computer Networks. Generate questions about OSI/TCP-IP models, protocols (HTTP, TCP, UDP), routing, DNS, network security, and socket programming.`,
+      'OOPS': `You are an expert interviewer for Object-Oriented Programming. Generate questions about classes, objects, inheritance, polymorphism, encapsulation, abstraction, and design patterns.`
+    };
 
-    console.log('Generating question:', { interviewType, questionNumber });
+    const systemPrompt = subjectPrompts[currentSubject] || `You are an expert interviewer for ${currentSubject}.`;
+
+    // Build user prompt
+    let userPrompt = '';
+    if (previousQuestions.length === 0) {
+      userPrompt = `Generate the first question about ${currentSubject}. Make it medium difficulty. The interview will have ${totalQuestions} total questions across these subjects: ${subjects.join(', ')}.`;
+    } else {
+      userPrompt = `Generate question #${questionNumber} about ${currentSubject}.
+      
+Previous questions asked:
+${previousQuestions.map((q: string, i: number) => `${i + 1}. ${q}`).join('\n')}
+
+Ensure this question is different, covers new concepts in ${currentSubject}, and progressively increases difficulty.`;
+    }
+
+    console.log('Generating question:', { subjects, currentSubject, questionNumber });
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',

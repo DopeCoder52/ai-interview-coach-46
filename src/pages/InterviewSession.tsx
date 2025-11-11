@@ -12,7 +12,8 @@ import { VoiceManager } from "@/utils/voiceManager";
 
 const InterviewSession = () => {
   const [searchParams] = useSearchParams();
-  const interviewType = searchParams.get("type") || "Technical - DSA";
+  const subjectsParam = searchParams.get("subjects") || "DSA";
+  const subjects = subjectsParam.split(',');
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -53,7 +54,7 @@ const InterviewSession = () => {
         .from('interview_sessions')
         .insert({
           user_id: user.id,
-          interview_type: interviewType,
+          interview_type: subjects.join(', '),
           status: 'in-progress',
         })
         .select()
@@ -108,8 +109,9 @@ const InterviewSession = () => {
     try {
       const { data, error } = await supabase.functions.invoke('generate-interview-question', {
         body: {
-          interviewType,
+          subjects,
           questionNumber,
+          totalQuestions,
           previousQuestions: prevQuestions,
         },
       });
@@ -211,7 +213,7 @@ const InterviewSession = () => {
           body: {
             question: currentQuestion,
             answer,
-            interviewType,
+            subjects: subjects.join(', '),
           },
         }
       );
@@ -294,7 +296,7 @@ const InterviewSession = () => {
       <header className="border-b border-border bg-card/50 backdrop-blur-sm p-4">
         <div className="container mx-auto flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-foreground">{interviewType}</h1>
+            <h1 className="text-xl font-bold text-foreground">{subjects.join(', ')}</h1>
             <p className="text-sm text-muted-foreground">
               Question {completedQuestions + 1} of {totalQuestions}
             </p>
