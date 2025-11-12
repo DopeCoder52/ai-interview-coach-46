@@ -365,14 +365,16 @@ const InterviewSession = () => {
               </div>
 
               <div>
-                <h3 className="text-sm font-medium text-foreground mb-2">Your Answer</h3>
-                <Textarea
-                  value={answer}
-                  onChange={(e) => setAnswer(e.target.value)}
-                  placeholder="Type your answer or use voice input..."
-                  className="min-h-[200px] resize-none"
-                  disabled={isLoadingQuestion || isSubmitting || isVoiceRecording}
-                />
+                <h3 className="text-sm font-medium text-foreground mb-2">Your Answer (Voice)</h3>
+                <div className="bg-muted/30 rounded-lg p-6 min-h-[200px] flex items-center justify-center">
+                  {answer ? (
+                    <p className="text-foreground text-center italic">"{answer}"</p>
+                  ) : (
+                    <p className="text-muted-foreground text-center">
+                      Click the microphone button below to record your answer
+                    </p>
+                  )}
+                </div>
               </div>
 
               <div className="flex gap-3">
@@ -380,42 +382,46 @@ const InterviewSession = () => {
                   <>
                     <Button
                       onClick={startVoiceAnswer}
-                      disabled={isLoadingQuestion || isSubmitting || isSpeaking}
-                      variant="outline"
-                      className="flex-1"
-                    >
-                      <Mic className="mr-2 h-4 w-4" />
-                      Voice Answer
-                    </Button>
-                    <Button
-                      onClick={submitAnswer}
-                      disabled={isLoadingQuestion || isSubmitting || !answer.trim()}
+                      disabled={isLoadingQuestion || isSubmitting || isSpeaking || !answer.trim()}
+                      size="lg"
                       className="flex-1 gradient-primary text-white"
                     >
-                      {isSubmitting ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Analyzing...
-                        </>
-                      ) : completedQuestions === totalQuestions - 1 ? (
-                        <>
-                          <CheckCircle className="mr-2 h-4 w-4" />
-                          Submit Final Answer
-                        </>
-                      ) : (
-                        <>
-                          <Send className="mr-2 h-4 w-4" />
-                          Submit & Continue
-                        </>
-                      )}
+                      <Mic className="mr-2 h-5 w-5" />
+                      {answer ? 'Record Again' : 'Start Recording'}
                     </Button>
+                    {answer && (
+                      <Button
+                        onClick={submitAnswer}
+                        disabled={isLoadingQuestion || isSubmitting}
+                        size="lg"
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                            Analyzing...
+                          </>
+                        ) : completedQuestions === totalQuestions - 1 ? (
+                          <>
+                            <CheckCircle className="mr-2 h-5 w-5" />
+                            Submit Final Answer
+                          </>
+                        ) : (
+                          <>
+                            <Send className="mr-2 h-5 w-5" />
+                            Submit & Continue
+                          </>
+                        )}
+                      </Button>
+                    )}
                   </>
                 ) : (
                   <Button
                     onClick={stopVoiceAnswer}
-                    className="flex-1 gradient-primary text-white"
+                    size="lg"
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white animate-pulse"
                   >
-                    <MicOff className="mr-2 h-4 w-4" />
+                    <MicOff className="mr-2 h-5 w-5" />
                     Stop Recording
                   </Button>
                 )}
@@ -424,15 +430,16 @@ const InterviewSession = () => {
           </Card>
         </div>
 
-        {/* Tips Section */}
+        {/* Voice Interview Tips */}
         <Card className="gradient-card shadow-soft p-6 mt-6">
-          <h3 className="font-semibold text-foreground mb-3">Interview Tips</h3>
+          <h3 className="font-semibold text-foreground mb-3">Voice Interview Tips</h3>
           <ul className="text-sm text-muted-foreground space-y-2">
-            <li>• Speak clearly and maintain good posture</li>
-            <li>• Take your time to think before answering</li>
-            <li>• Use the STAR method for behavioral questions (Situation, Task, Action, Result)</li>
-            <li>• For technical questions, explain your thought process</li>
-            <li>• Be specific and provide examples when possible</li>
+            <li>• Speak clearly and at a moderate pace</li>
+            <li>• Listen carefully to each question before answering</li>
+            <li>• Take a moment to organize your thoughts</li>
+            <li>• Explain your reasoning step-by-step for technical questions</li>
+            <li>• Use examples to illustrate your points</li>
+            <li>• If you need clarification, you can re-record your answer</li>
           </ul>
         </Card>
       </main>

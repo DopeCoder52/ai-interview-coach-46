@@ -12,43 +12,28 @@ export class VoiceManager {
     if (this.isSpeaking) return;
     
     this.isSpeaking = true;
-    try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/text-to-speech`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({ text }),
-      });
-
-      if (!response.ok) throw new Error('TTS failed');
-
-      const { audioContent } = await response.json();
-      await this.playAudio(audioContent);
-    } finally {
-      this.isSpeaking = false;
-    }
-  }
-
-  private async playAudio(base64Audio: string): Promise<void> {
-    const binaryString = atob(base64Audio);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-
-    const audioBlob = new Blob([bytes], { type: 'audio/mpeg' });
-    const audioUrl = URL.createObjectURL(audioBlob);
-    const audio = new Audio(audioUrl);
-
     return new Promise((resolve, reject) => {
-      audio.onended = () => {
-        URL.revokeObjectURL(audioUrl);
-        resolve();
-      };
-      audio.onerror = reject;
-      audio.play();
+      try {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.9;
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+        
+        utterance.onend = () => {
+          this.isSpeaking = false;
+          resolve();
+        };
+        
+        utterance.onerror = (error) => {
+          this.isSpeaking = false;
+          reject(error);
+        };
+        
+        window.speechSynthesis.speak(utterance);
+      } catch (error) {
+        this.isSpeaking = false;
+        reject(error);
+      }
     });
   }
 

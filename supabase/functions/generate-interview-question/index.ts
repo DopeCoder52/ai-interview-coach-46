@@ -36,28 +36,27 @@ serve(async (req) => {
       questionsAsked += questionsForThisSubject;
     }
 
-    // Build subject-specific system prompts
+    // Build conversational HR-style prompts
     const subjectPrompts: { [key: string]: string } = {
-      'DSA': `You are an expert interviewer for Data Structures and Algorithms. Generate challenging questions that assess problem-solving, algorithmic thinking, and coding ability. Focus on arrays, trees, graphs, dynamic programming, and optimization.`,
-      'OS': `You are an expert interviewer for Operating Systems. Generate questions about processes, threads, memory management, file systems, deadlocks, scheduling algorithms, and system calls.`,
-      'DBMS': `You are an expert interviewer for Database Management Systems. Generate questions about normalization, transactions, ACID properties, indexing, SQL queries, joins, and database design.`,
-      'Networks': `You are an expert interviewer for Computer Networks. Generate questions about OSI/TCP-IP models, protocols (HTTP, TCP, UDP), routing, DNS, network security, and socket programming.`,
-      'OOPS': `You are an expert interviewer for Object-Oriented Programming. Generate questions about classes, objects, inheritance, polymorphism, encapsulation, abstraction, and design patterns.`
+      'DSA': `You are a friendly HR interviewer having a natural conversation about Data Structures and Algorithms. Speak as if you're directly talking to the candidate. Use casual phrases like "Alright", "Let me ask you", "Here's one for you". Ask ONE clear technical question about arrays, trees, graphs, dynamic programming, or optimization. Keep it conversational but professional.`,
+      'OS': `You are a friendly HR interviewer having a natural conversation about Operating Systems. Speak directly to the candidate using phrases like "Okay", "Let's talk about", "Tell me". Ask ONE clear question about processes, threads, memory management, scheduling, or deadlocks. Keep it conversational.`,
+      'DBMS': `You are a friendly HR interviewer having a natural conversation about Database Management Systems. Talk naturally using phrases like "Alright", "Here's what I want to know", "Let me ask you". Ask ONE clear question about normalization, transactions, indexing, or SQL. Keep it conversational.`,
+      'Networks': `You are a friendly HR interviewer having a natural conversation about Computer Networks. Speak casually using phrases like "Okay", "Let's discuss", "Tell me about". Ask ONE clear question about protocols, OSI model, routing, or network security. Keep it conversational.`,
+      'OOPS': `You are a friendly HR interviewer having a natural conversation about Object-Oriented Programming. Use natural phrases like "Alright", "Here's my question", "Let me ask". Ask ONE clear question about classes, inheritance, polymorphism, or design patterns. Keep it conversational.`
     };
 
-    const systemPrompt = subjectPrompts[currentSubject] || `You are an expert interviewer for ${currentSubject}.`;
+    const systemPrompt = subjectPrompts[currentSubject] || `You are a friendly HR interviewer for ${currentSubject}. Speak naturally and conversationally.`;
 
     // Build user prompt
     let userPrompt = '';
     if (previousQuestions.length === 0) {
-      userPrompt = `Generate the first question about ${currentSubject}. Make it medium difficulty. The interview will have ${totalQuestions} total questions across these subjects: ${subjects.join(', ')}.`;
+      userPrompt = `Generate the first question about ${currentSubject}. Start with a casual greeting like "Alright, let's start with..." or "Okay, first question..." Then ask ONE clear technical question. Keep it medium difficulty and conversational for a voice interview.`;
     } else {
-      userPrompt = `Generate question #${questionNumber} about ${currentSubject}.
+      userPrompt = `Generate question #${questionNumber} about ${currentSubject}. Start with a transition phrase like "Next question", "Alright", or "Here's another one". Then ask ONE clear technical question.
       
-Previous questions asked:
-${previousQuestions.map((q: string, i: number) => `${i + 1}. ${q}`).join('\n')}
+Questions already asked: ${previousQuestions.map((q: string, i: number) => `${i + 1}. ${q.substring(0, 100)}...`).join('\n')}
 
-Ensure this question is different, covers new concepts in ${currentSubject}, and progressively increases difficulty.`;
+Make it different, cover new concepts, and sound natural for a voice conversation.`;
     }
 
     console.log('Generating question:', { subjects, currentSubject, questionNumber });
